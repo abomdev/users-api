@@ -1,6 +1,6 @@
 import { Transform } from 'class-transformer';
 import { IsEmail, IsString, MaxLength } from 'class-validator';
-import { normalizeEmail } from '../../../users/domain/user.entity';
+import { normalizeEmailInput } from './transforms';
 
 /**
  * Contrato de entrada de POST /auth/login.
@@ -12,7 +12,7 @@ import { normalizeEmail } from '../../../users/domain/user.entity';
 export class LoginUserDto {
   // Misma normalizacion previa que en el registro (regla 1): sin ella, quien
   // se registro con `ana@example.com` no podria entrar escribiendo `Ana@...`.
-  @Transform(({ value }) => (typeof value === 'string' ? normalizeEmail(value) : value))
+  @Transform(normalizeEmailInput)
   @IsEmail({}, { message: 'email debe ser una direccion de correo valida' })
   @MaxLength(255)
   email!: string;

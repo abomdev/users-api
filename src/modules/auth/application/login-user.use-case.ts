@@ -1,38 +1,34 @@
+import { randomUUID } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { normalizeEmail } from '../../users/domain/user.entity';
 import { USER_REPOSITORY, UserRepository } from '../../users/domain/user.repository.port';
-import { ACCESS_TOKEN_ISSUER, AccessTokenIssuer } from '../domain/access-token.port';
 import { InvalidCredentialsError } from '../domain/auth.errors';
 import { PASSWORD_HASHER, PasswordHasher } from '../domain/password-hasher.port';
+import { IssueTokenPair, TokenPair } from './issue-token-pair.service';
 
 export interface LoginUserInput {
   email: string;
   password: string;
 }
 
-export interface LoginUserOutput {
-  accessToken: string;
-  expiresInSeconds: number;
-}
+const MS_POR_DIA = 24 * 60 * 60 * 1000;
 
 /**
  * Autenticacion con email y contrasena.
  *
- * Implementa las reglas 7 (parcial), 8 y 9 de spec.md.
- *
- * Nota de alcance: la regla 7 pide devolver tambien un refresh token. Esta
- * fase entrega solo el access token; la otra mitad se completa en la fase de
- * refresh con rotacion, junto con la familia de tokens que abre el login.
+ * Implementa las reglas 7, 8, 9, 11 y 12 de spec.md.
  */
 @Injectable()
 export class LoginUserUseCase {
   constructor(
     @Inject(USER_REPOSITORY) private readonly users: UserRepository,
     @Inject(PASSWORD_HASHER) private readonly hasher: PasswordHasher,
-    @Inject(ACCESS_TOKEN_ISSUER) private readonly tokens: AccessTokenIssuer,
+    private readonly issueTokenPair: IssueTokenPair,
+    private readonly config: ConfigService<Record<string, unknown>, true>,
   ) {}
 
-  async execute(input: LoginUserInput): Promise<LoginUserOutput> {
+  async execute(input: LoginUserInput): Promise<TokenPair> {
     const email = normalizeEmail(input.email);
     const user = await this.users.findByEmail(email);
 
@@ -50,13 +46,13 @@ export class LoginUserUseCase {
       throw new InvalidCredentialsError();
     }
 
-    // Regla 9: el payload lleva sub, email y role.
-    const { token, expiresInSeconds } = await this.tokens.issue({
-      sub: user.id,
-      email: user.email,
-      role: user.role,
-    });
+    const dias = this.config.get<number>('REFRESH_TTL_DAYS');
 
-    return { accessToken: token, expiresInSeconds };
+    // Regla 7: cada login abre una familia nueva. Asi las sesiones son
+    // independientes -- revocar la del telefono no cierra la de la notebook.
+    return this.issueTokenPair.execute(user, {
+      familyId: randomUUID(),
+      refreshExpiresAt: new Date(Date.now() + dias * MS_POR_DIA),
+    });
   }
 }

@@ -23,6 +23,9 @@ export interface UserRepository {
   /** Busca por email ya normalizado. Devuelve null si no existe. */
   findByEmail(email: string): Promise<User | null>;
 
+  /** Busca por identificador. Devuelve null si no existe. */
+  findById(id: string): Promise<User | null>;
+
   /**
    * Crea el usuario. Si el email ya esta tomado lanza
    * EmailAlreadyRegisteredError (regla 2), incluso si la colision ocurre entre

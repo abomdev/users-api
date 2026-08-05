@@ -1,6 +1,6 @@
 import { Transform } from 'class-transformer';
 import { IsEmail, IsString, MaxLength, MinLength } from 'class-validator';
-import { normalizeEmail } from '../../../users/domain/user.entity';
+import { normalizeEmailInput } from './transforms';
 
 /**
  * Contrato de entrada de POST /auth/register (seccion 4 de spec.md).
@@ -18,7 +18,7 @@ export class RegisterUserDto {
   // durante la conversion del cuerpo, o sea antes que los validadores. Sin
   // esto, `  ANA@EXAMPLE.COM  ` fallaria el @IsEmail por los espacios y
   // devolveria 400 en lugar del 409 que corresponde por email ya registrado.
-  @Transform(({ value }) => (typeof value === 'string' ? normalizeEmail(value) : value))
+  @Transform(normalizeEmailInput)
   @IsEmail({}, { message: 'email debe ser una direccion de correo valida' })
   @MaxLength(255, { message: 'email no puede superar los 255 caracteres' })
   email!: string;

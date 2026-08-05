@@ -1,12 +1,21 @@
-import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common';
+import { GetOwnProfileUseCase } from '../application/get-own-profile.use-case';
+import { TokenPair } from '../application/issue-token-pair.service';
 import { LoginUserUseCase } from '../application/login-user.use-case';
+import { LogoutUseCase } from '../application/logout.use-case';
+import { RefreshTokensUseCase } from '../application/refresh-tokens.use-case';
 import { RegisterUserUseCase } from '../application/register-user.use-case';
+import { AuthenticatedUser } from '../infrastructure/jwt.strategy';
+import { CurrentUser } from './decorators/current-user.decorator';
 import { LoginUserDto } from './dto/login-user.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { toUserResponse, UserResponse } from './dto/user-response.dto';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
-interface LoginResponse {
+interface TokenPairResponse {
   accessToken: string;
+  refreshToken: string;
   tokenType: 'Bearer';
   expiresIn: number;
 }
@@ -22,6 +31,9 @@ export class AuthController {
   constructor(
     private readonly registerUser: RegisterUserUseCase,
     private readonly loginUser: LoginUserUseCase,
+    private readonly refreshTokens: RefreshTokensUseCase,
+    private readonly logout: LogoutUseCase,
+    private readonly getOwnProfile: GetOwnProfileUseCase,
   ) {}
 
   @Post('register')
@@ -34,13 +46,36 @@ export class AuthController {
   @Post('login')
   // Sin esto Nest responderia 201 a un POST. Un login no crea nada: es 200.
   @HttpCode(HttpStatus.OK)
-  async login(@Body() dto: LoginUserDto): Promise<LoginResponse> {
-    const { accessToken, expiresInSeconds } = await this.loginUser.execute(dto);
+  async login(@Body() dto: LoginUserDto): Promise<TokenPairResponse> {
+    return this.toResponse(await this.loginUser.execute(dto));
+  }
 
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  async refresh(@Body() dto: RefreshTokenDto): Promise<TokenPairResponse> {
+    return this.toResponse(await this.refreshTokens.execute(dto.refreshToken));
+  }
+
+  @Post('logout')
+  // 204: la sesion quedo cerrada y no hay nada que devolver.
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async logoutSession(@Body() dto: RefreshTokenDto): Promise<void> {
+    await this.logout.execute(dto.refreshToken);
+  }
+
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  async me(@CurrentUser() actor: AuthenticatedUser): Promise<UserResponse> {
+    const user = await this.getOwnProfile.execute(actor.userId);
+    return toUserResponse(user);
+  }
+
+  private toResponse(par: TokenPair): TokenPairResponse {
     return {
-      accessToken,
+      accessToken: par.accessToken,
+      refreshToken: par.refreshToken,
       tokenType: 'Bearer',
-      expiresIn: expiresInSeconds,
+      expiresIn: par.expiresInSeconds,
     };
   }
 }
