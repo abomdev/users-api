@@ -1,0 +1,35 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    "outDir": "./dist",
+    "baseUrl": "./",
+    "rootDir": "./src",
+
+    /* NestJS se apoya en decoradores y en la metadata de tipos que emite el
+       compilador: sin estas dos banderas, la inyeccion de dependencias no
+       sabe que instanciar y la app falla al arrancar. */
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+
+    /* Modo estricto completo. Es mas exigente al escribir, pero convierte en
+       errores de compilacion cosas que si no aparecerian recien en runtime. */
+    "strict": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
+
+    "declaration": false,
+    "removeComments": true,
+    "sourceMap": true,
+    "incremental": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}

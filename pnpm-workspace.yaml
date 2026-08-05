@@ -1,0 +1,14 @@
+# pnpm 11 bloquea por defecto los scripts de instalacion de las dependencias.
+# Es una proteccion contra codigo malicioso en postinstall: si no se aprueba
+# explicitamente, el script no corre.
+#
+# Prisma y SWC NECESITAN el suyo para bajar sus binarios nativos. Sin esta
+# aprobacion, `prisma generate` falla y hasta `pnpm exec` aborta.
+#
+# Ojo: hasta pnpm 10 esto se declaraba como "onlyBuiltDependencies" dentro de
+# package.json. En pnpm 11 esa clave se ignora (avisa con un warning) y la
+# configuracion vive aca. La mayoria de la documentacion sigue desactualizada.
+allowBuilds:
+  '@prisma/engines': true
+  '@swc/core': true
+  prisma: true

@@ -1,0 +1,9 @@
+# Normaliza los finales de linea a LF dentro del repositorio.
+# Sin esto, Git avisa "LF will be replaced by CRLF" en cada archivo que tocas
+# desde Windows, y el mismo archivo aparece como modificado en otro sistema.
+* text=auto eol=lf
+
+# Estos son binarios: Git no debe tocarles el contenido
+*.png binary
+*.jpg binary
+*.ico binary

@@ -1,0 +1,21 @@
+node_modules/
+dist/
+coverage/
+
+# Secretos locales. Se versiona .env.example, nunca .env
+.env
+.env.local
+.env.*.local
+
+# Cliente que Prisma genera en cada install: se regenera, no se versiona
+src/generated/
+
+*.log
+npm-debug.log*
+pnpm-debug.log*
+.DS_Store
+Thumbs.db
+*.tsbuildinfo
+.idea/
+.vscode/*
+!.vscode/extensions.json
