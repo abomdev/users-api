@@ -1,3 +1,4 @@
+import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty, IsString, MaxLength } from 'class-validator';
 
 /**
@@ -8,6 +9,10 @@ import { IsNotEmpty, IsString, MaxLength } from 'class-validator';
  * vale es encontrar su hash entre los guardados.
  */
 export class RefreshTokenDto {
+  @ApiProperty({
+    description: 'El refreshToken devuelto por /auth/login o por un /auth/refresh anterior',
+    example: '4BiJwhkTx8oq1e79-xibKQ7v2mNpLd3RcYzA6HsUeWk',
+  })
   @IsString()
   @IsNotEmpty({ message: 'refreshToken es obligatorio' })
   @MaxLength(512)

@@ -1,3 +1,4 @@
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsInt, Max, Min } from 'class-validator';
 
@@ -12,11 +13,13 @@ import { IsInt, Max, Min } from 'class-validator';
  * que este escrito.
  */
 export class ListUsersQueryDto {
+  @ApiPropertyOptional({ minimum: 1, default: 1, example: 1 })
   @Type(() => Number)
   @IsInt({ message: 'page debe ser un numero entero' })
   @Min(1, { message: 'page debe ser mayor o igual a 1' })
   page: number = 1;
 
+  @ApiPropertyOptional({ minimum: 1, maximum: 100, default: 20, example: 20 })
   // El tope de 100 no es capricho: sin el, un `?limit=1000000` obligaria a
   // traer la tabla entera a memoria y serializarla.
   @Type(() => Number)

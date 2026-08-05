@@ -1,3 +1,4 @@
+import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import { IsEmail, IsString, MaxLength, MinLength } from 'class-validator';
 import { normalizeEmailInput } from './transforms';
@@ -14,6 +15,11 @@ import { normalizeEmailInput } from './transforms';
  * hace cumplir la regla 5 sin escribir una sola comprobacion.
  */
 export class RegisterUserDto {
+  @ApiProperty({
+    description: 'Se normaliza a minusculas y sin espacios antes de validarse (regla 1)',
+    example: 'ana@example.com',
+    maxLength: 255,
+  })
   // La regla 1 dice "se normaliza antes de validarse": el @Transform corre
   // durante la conversion del cuerpo, o sea antes que los validadores. Sin
   // esto, `  ANA@EXAMPLE.COM  ` fallaria el @IsEmail por los espacios y
@@ -23,6 +29,12 @@ export class RegisterUserDto {
   @MaxLength(255, { message: 'email no puede superar los 255 caracteres' })
   email!: string;
 
+  @ApiProperty({
+    description: 'Entre 8 y 128 caracteres (regla 4)',
+    example: 'unaClaveSegura1',
+    minLength: 8,
+    maxLength: 128,
+  })
   // Regla 4. El maximo tambien importa: sin tope, una contrasena enorme
   // convierte cada registro en trabajo de hasheo arbitrariamente caro.
   @IsString()

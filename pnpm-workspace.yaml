@@ -12,3 +12,9 @@ allowBuilds:
   '@prisma/engines': true
   '@swc/core': true
   prisma: true
+
+  # Telemetria que viene arrastrada por @nestjs/swagger. Su script de
+  # instalacion reporta datos de uso a un servidor externo. No aporta nada al
+  # funcionamiento de la libreria, asi que se deniega. Dejarlo anotado en false
+  # (y no borrar la linea) evita que pnpm vuelva a preguntar en cada install.
+  '@scarf/scarf': false
