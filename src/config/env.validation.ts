@@ -58,10 +58,16 @@ export class EnvironmentVariables {
   })
   JWT_SECRET!: string;
 
-  /** Vida del access token, en formato de `ms` (por ejemplo `15m`). Regla 9. */
-  @IsString()
-  @IsNotEmpty()
-  JWT_ACCESS_TTL: string = '15m';
+  /**
+   * Vida del access token, en segundos. Regla 9: 15 minutos = 900.
+   *
+   * Va en segundos y no como "15m" porque es la unidad que usa el propio
+   * estandar JWT para `exp`: no hay que interpretar ninguna cadena, y el valor
+   * que se firma es exactamente el que se configura.
+   */
+  @IsInt({ message: 'JWT_ACCESS_TTL_SECONDS debe ser un numero entero' })
+  @Min(60)
+  JWT_ACCESS_TTL_SECONDS: number = 900;
 
   /** Vida del refresh token, en dias. Regla 12. */
   @IsInt({ message: 'REFRESH_TTL_DAYS debe ser un numero entero' })
