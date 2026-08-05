@@ -12,6 +12,19 @@ export interface NewUser {
   passwordHash: string;
 }
 
+export interface PageRequest {
+  /** Cuantos registros saltear desde el comienzo. */
+  skip: number;
+  /** Cuantos registros traer. */
+  take: number;
+}
+
+export interface UserPage {
+  data: User[];
+  /** Total de usuarios, no de esta pagina. */
+  total: number;
+}
+
 /**
  * Puerto de persistencia de usuarios.
  *
@@ -25,6 +38,15 @@ export interface UserRepository {
 
   /** Busca por identificador. Devuelve null si no existe. */
   findById(id: string): Promise<User | null>;
+
+  /**
+   * Una pagina del listado, mas el total de usuarios.
+   *
+   * Devuelve las dos cosas juntas porque el caso de uso necesita el total para
+   * calcular `totalPages`, y pedirlo por separado abriria la puerta a que la
+   * cuenta y la pagina correspondan a momentos distintos.
+   */
+  findPage(params: PageRequest): Promise<UserPage>;
 
   /**
    * Crea el usuario. Si el email ya esta tomado lanza

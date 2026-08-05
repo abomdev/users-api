@@ -1,10 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../shared/prisma/prisma.service';
 import { Role as PrismaRole, User as PrismaUser } from '../../../generated/prisma/client';
-import { Role } from '../domain/role.enum';
+import { Role } from '../../../shared/domain/role.enum';
 import { User } from '../domain/user.entity';
 import { EmailAlreadyRegisteredError } from '../domain/user.errors';
-import { NewUser, UserRepository } from '../domain/user.repository.port';
+import {
+  NewUser,
+  PageRequest,
+  UserPage,
+  UserRepository,
+} from '../domain/user.repository.port';
 
 /** Postgres viola el indice unico de `email`. */
 const UNIQUE_VIOLATION = 'P2002';
@@ -21,6 +26,26 @@ export class PrismaUserRepository implements UserRepository {
   async findById(id: string): Promise<User | null> {
     const fila = await this.prisma.user.findUnique({ where: { id } });
     return fila ? this.toDomain(fila) : null;
+  }
+
+  async findPage({ skip, take }: PageRequest): Promise<UserPage> {
+    // $transaction corre las dos consultas en la misma transaccion: sin eso,
+    // un alta entre una y otra daria un total que no se corresponde con la
+    // pagina devuelta.
+    const [filas, total] = await this.prisma.$transaction([
+      this.prisma.user.findMany({
+        skip,
+        take,
+        // Regla 20: por fecha descendente y, a igualdad, por id. El segundo
+        // criterio es el que hace estable la paginacion: sin el, dos usuarios
+        // creados en el mismo milisegundo podrian ordenarse distinto en cada
+        // consulta y aparecer repetidos o ausentes al pasar de pagina.
+        orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
+      }),
+      this.prisma.user.count(),
+    ]);
+
+    return { data: filas.map((fila) => this.toDomain(fila)), total };
   }
 
   async create(data: NewUser): Promise<User> {

@@ -2,15 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
-import { Role } from '../../users/domain/role.enum';
+import { AuthenticatedUser } from '../../../shared/auth/authenticated-user';
 import { AccessTokenPayload } from '../domain/access-token.port';
-
-/** Lo que queda disponible en `request.user` tras autenticar. */
-export interface AuthenticatedUser {
-  userId: string;
-  email: string;
-  role: Role;
-}
 
 /**
  * Validacion del access token (regla 10).

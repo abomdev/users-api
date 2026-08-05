@@ -1,4 +1,4 @@
-import { Role } from '../../users/domain/role.enum';
+import { Role } from '../../../shared/domain/role.enum';
 
 /** Contenido del access token (regla 9). */
 export interface AccessTokenPayload {

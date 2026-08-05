@@ -1,6 +1,6 @@
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
 import { Request } from 'express';
-import { AuthenticatedUser } from '../../infrastructure/jwt.strategy';
+import { AuthenticatedUser } from './authenticated-user';
 
 /**
  * Inyecta el usuario autenticado en el metodo del controlador.

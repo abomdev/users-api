@@ -5,13 +5,13 @@ import { LoginUserUseCase } from '../application/login-user.use-case';
 import { LogoutUseCase } from '../application/logout.use-case';
 import { RefreshTokensUseCase } from '../application/refresh-tokens.use-case';
 import { RegisterUserUseCase } from '../application/register-user.use-case';
-import { AuthenticatedUser } from '../infrastructure/jwt.strategy';
-import { CurrentUser } from './decorators/current-user.decorator';
+import { AuthenticatedUser } from '../../../shared/auth/authenticated-user';
+import { CurrentUser } from '../../../shared/auth/current-user.decorator';
+import { JwtAuthGuard } from '../../../shared/auth/jwt-auth.guard';
 import { LoginUserDto } from './dto/login-user.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { RegisterUserDto } from './dto/register-user.dto';
-import { toUserResponse, UserResponse } from './dto/user-response.dto';
-import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { toUserResponse, UserResponse } from '../../users/presentation/dto/user-response.dto';
 
 interface TokenPairResponse {
   accessToken: string;

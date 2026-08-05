@@ -1,4 +1,4 @@
-import { Role } from './role.enum';
+import { Role } from '../../../shared/domain/role.enum';
 
 /**
  * Un usuario tal como lo entiende el negocio.

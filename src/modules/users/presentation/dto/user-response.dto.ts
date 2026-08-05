@@ -1,5 +1,5 @@
-import { Role } from '../../../users/domain/role.enum';
-import { User } from '../../../users/domain/user.entity';
+import { Role } from '../../../../shared/domain/role.enum';
+import { User } from '../../domain/user.entity';
 
 /**
  * Forma en que un usuario sale de la API.
