@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { validateEnv } from './config/env.validation';
+import { PrismaModule } from './shared/prisma/prisma.module';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { validateEnv } from './config/env.validation';
       // Ya validada, la config no cambia: cachearla evita releer process.env.
       cache: true,
     }),
+    PrismaModule,
   ],
 })
 export class AppModule {}

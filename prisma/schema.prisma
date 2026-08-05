@@ -1,0 +1,52 @@
+// Modelo de datos de la seccion 3 de spec.md.
+//
+// En Prisma 7 el bloque `datasource` ya no lleva `url`: la conexion vive en
+// prisma.config.ts y el cliente la recibe por medio de un driver adapter.
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique @db.VarChar(255)
+  passwordHash String   @map("password_hash")
+  role         Role     @default(USER)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  refreshTokens RefreshToken[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  // SHA-256 del token. El valor original nunca se guarda (regla 11).
+  tokenHash String    @unique @map("token_hash")
+  // Agrupa la cadena de rotaciones nacida de un login, para poder revocarla
+  // entera cuando se detecta reuso (regla 14).
+  familyId  String    @map("family_id") @db.Uuid
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  // Cascade implementa la regla 21: borrar un usuario borra sus tokens.
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([familyId])
+  @@map("refresh_tokens")
+}
