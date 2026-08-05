@@ -6,7 +6,10 @@
     "lib": ["ES2023"],
     "outDir": "./dist",
     "baseUrl": "./",
-    "rootDir": "./src",
+    /* La raiz abarca src y test para que el editor y ESLint analicen los dos.
+       El build la reduce a ./src en tsconfig.build.json, que es el que usa
+       `nest build`, para que los tests no terminen dentro de dist. */
+    "rootDir": "./",
 
     /* NestJS se apoya en decoradores y en la metadata de tipos que emite el
        compilador: sin estas dos banderas, la inyeccion de dependencias no
@@ -30,6 +33,6 @@
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "test/**/*", "prisma.config.ts"],
   "exclude": ["node_modules", "dist"]
 }

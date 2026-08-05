@@ -25,8 +25,9 @@ export class RefreshToken {
     return this.expiresAt.getTime() <= now.getTime();
   }
 
-  /** Regla 15: solo sirve el token que no esta ni revocado ni vencido. */
-  isUsable(now: Date): boolean {
-    return !this.isRevoked && !this.isExpired(now);
-  }
+  // Nota: no hay un `isUsable()` que combine los dos estados, aunque la regla
+  // 15 los trate igual. El caso de uso necesita distinguirlos: un token
+  // revocado que reaparece revoca la familia entera (regla 14), mientras que
+  // uno vencido solo se rechaza. Fundirlos en un solo metodo escondería
+  // justamente la diferencia que importa.
 }

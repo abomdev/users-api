@@ -17,10 +17,6 @@ export class User {
     readonly createdAt: Date,
     readonly updatedAt: Date,
   ) {}
-
-  isAdmin(): boolean {
-    return this.role === Role.Admin;
-  }
 }
 
 /**

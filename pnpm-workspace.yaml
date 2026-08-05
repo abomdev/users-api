@@ -18,3 +18,8 @@ allowBuilds:
   # funcionamiento de la libreria, asi que se deniega. Dejarlo anotado en false
   # (y no borrar la linea) evita que pnpm vuelva a preguntar en cada install.
   '@scarf/scarf': false
+
+  # Resolvedor de modulos nativo que usa jest-resolve en Jest 30. Su postinstall
+  # enlaza el binario que corresponde a esta plataforma: sin el, Jest no
+  # resuelve imports. Es funcional, no telemetria.
+  unrs-resolver: true
