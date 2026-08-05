@@ -23,5 +23,50 @@ services:
       retries: 10
       start_period: 10s
 
+  # Servicio de un solo uso: aplica las migraciones y termina.
+  #
+  # Va separado de la API a proposito. Migrar es un paso del despliegue, no
+  # parte del arranque de la aplicacion: si la API migrara al iniciar, levantar
+  # tres instancias significaria tres intentos simultaneos de modificar el
+  # esquema. Aca corre una sola vez y la API espera a que termine bien.
+  #
+  # Usa la etapa `build`, que es la unica que tiene la CLI de Prisma: la imagen
+  # final no la lleva.
+  migrate:
+    build:
+      context: .
+      target: build
+    container_name: users-api-migrate
+    command: pnpm exec prisma migrate deploy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?schema=public
+    depends_on:
+      db:
+        condition: service_healthy
+
+  api:
+    build:
+      context: .
+      target: runtime
+    container_name: users-api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      # Dentro de la red de compose el host es `db`, no localhost: cada
+      # contenedor tiene su propio localhost.
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?schema=public
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ACCESS_TTL_SECONDS: ${JWT_ACCESS_TTL_SECONDS}
+      REFRESH_TTL_DAYS: ${REFRESH_TTL_DAYS}
+    ports:
+      - '${PORT:-3000}:3000'
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        # Arranca solo si las migraciones terminaron sin error.
+        condition: service_completed_successfully
+
 volumes:
   users-api-pgdata:

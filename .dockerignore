@@ -1,0 +1,30 @@
+# Todo lo que no aparezca aca se envia al daemon de Docker en cada build.
+# Ademas de hacerlo lento, cualquier cosa copiada por accidente termina dentro
+# de la imagen -- incluidos los secretos.
+
+node_modules
+dist
+coverage
+
+# NUNCA dentro de la imagen: las credenciales van por variables de entorno
+.env
+.env.local
+.env.*.local
+
+.git
+.github
+.vscode
+.idea
+
+# El cliente de Prisma se regenera dentro del build
+src/generated
+
+# Tests y sus configuraciones: no forman parte del artefacto que se despliega
+test
+**/*.spec.ts
+**/*.e2e-spec.ts
+jest.config.js
+
+*.log
+*.md
+!README.md

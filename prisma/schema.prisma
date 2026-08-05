@@ -7,6 +7,16 @@ generator client {
   provider     = "prisma-client"
   output       = "../src/generated/prisma"
   moduleFormat = "cjs"
+
+  // Sin esto, Prisma decide la extension de los imports mirando si encuentra un
+  // tsconfig.json y que moduleResolution declara. Eso hace que el resultado
+  // dependa de desde donde se ejecute `generate`: dentro de Docker, donde el
+  // tsconfig todavia no esta copiado, generaba imports terminados en ".ts" que
+  // Node no puede resolver en tiempo de ejecucion.
+  //
+  // Declararlo explicitamente hace que el cliente generado sea siempre el
+  // mismo, se genere donde se genere.
+  importFileExtension = ""
 }
 
 datasource db {
