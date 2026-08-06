@@ -14,7 +14,8 @@
     "format": "prettier --write \"src/**/*.{ts,vue}\"",
     "test": "vitest run",
     "test:watch": "vitest",
-    "type-check": "vue-tsc -b --force"
+    "type-check": "vue-tsc -b --force",
+    "api:types": "openapi-typescript http://localhost:3000/docs-json -o src/shared/api/schema.gen.ts"
   },
   "dependencies": {
     "@primeuix/themes": "^3.0.0",
@@ -35,6 +36,7 @@
     "eslint-plugin-vue": "^10.10.0",
     "globals": "^17.9.0",
     "jsdom": "^30.0.1",
+    "openapi-typescript": "^7.13.0",
     "prettier": "^3.9.6",
     "typescript": "5.9.3",
     "typescript-eslint": "^8.66.0",

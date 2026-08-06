@@ -31,6 +31,27 @@ export default defineConfig({
         target: 'http://localhost:3000',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ''),
+
+        // La cookie del refresh token llega del backend con `Path=/auth`
+        // (regla 22 de la spec raiz): esa ruta es correcta DESDE la API, que
+        // no sabe que existe un proxy. Pero el navegador decide si adjuntar
+        // una cookie mirando la URL que EL MISMO pidio -- `/api/auth/...',
+        // no `/auth/...' -- y esa decision pasa ANTES de que este proxy
+        // reescriba nada. Sin este ajuste, la cookie queda guardada con un
+        // Path que ninguna peticion real del navegador vuelve a igualar, y
+        // /auth/refresh recibe 401 siempre, como si la cookie nunca hubiera
+        // llegado. Lo mismo va a hacer falta en nginx para produccion (fase
+        // 18), con `proxy_cookie_path`.
+        configure: (proxy) => {
+          proxy.on('proxyRes', (proxyRes) => {
+            const cookies = proxyRes.headers['set-cookie'];
+            if (!cookies) return;
+
+            proxyRes.headers['set-cookie'] = cookies.map((cookie) =>
+              cookie.replace(/Path=\/auth\b/i, 'Path=/api/auth'),
+            );
+          });
+        },
       },
     },
   },
