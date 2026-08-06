@@ -16,7 +16,7 @@ import { config as loadEnv } from 'dotenv';
  * Si la base no existe, Prisma la crea.
  */
 export default function globalSetup(): void {
-  loadEnv({ path: '.env.test', override: true });
+  loadEnv({ path: '../../.env.test', override: true });
 
   execSync('pnpm exec prisma migrate deploy', {
     stdio: 'inherit',

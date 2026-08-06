@@ -7,8 +7,14 @@ coverage/
 .env.local
 .env.*.local
 
-# Cliente que Prisma genera en cada install: se regenera, no se versiona
-src/generated/
+# Cliente que Prisma genera en cada install: se regenera, no se versiona.
+#
+# Va con ** por delante a proposito: un patron que contiene una barra en el
+# medio queda anclado a la carpeta del .gitignore, asi que "src/generated/"
+# dejo de coincidir cuando el backend se movio a apps/api/src/generated.
+# (node_modules/, dist/ y coverage/ no tienen ese problema porque su unica
+# barra es la final, y esos si coinciden a cualquier profundidad.)
+**/src/generated/
 
 *.log
 npm-debug.log*

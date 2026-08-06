@@ -1,5 +1,10 @@
 # syntax=docker/dockerfile:1
 
+# IMPORTANTE: el contexto de build es la RAIZ del monorepo, no esta carpeta.
+# En un workspace de pnpm el lockfile vive arriba, y sin el no se puede
+# instalar con --frozen-lockfile. Por eso todas las rutas de COPY empiezan en
+# la raiz. El docker-compose ya lo configura asi.
+
 # ---------------------------------------------------------------------------
 # Base comun: Node y pnpm.
 #
@@ -29,30 +34,43 @@ WORKDIR /app
 # Se copian primero solo los manifiestos: mientras no cambien, Docker reutiliza
 # esta capa y no vuelve a descargar nada aunque cambie el codigo fuente.
 #
-# El schema de Prisma tambien va aca porque el postinstall corre `prisma
-# generate`, que lo necesita.
+# El schema de Prisma y el tsconfig tambien van aca porque el postinstall corre
+# `prisma generate`, que los necesita a los dos.
 # ---------------------------------------------------------------------------
 FROM base AS deps
+
+# El motor de esquema de Prisma -- el que aplica las migraciones -- se enlaza
+# contra OpenSSL. La imagen slim no lo trae, y sin el Prisma avisa que "puede no
+# funcionar como se espera". Va solo en esta etapa: de aca heredan `build` y el
+# servicio de migraciones, mientras que la imagen final arranca de `base` y se
+# queda sin este peso, porque en tiempo de ejecucion no migra nada.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends openssl \
+ && rm -rf /var/lib/apt/lists/*
+
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY prisma.config.ts tsconfig.json ./
-COPY prisma ./prisma
+COPY apps/api/package.json ./apps/api/
+COPY apps/api/prisma.config.ts apps/api/tsconfig.json ./apps/api/
+COPY apps/api/prisma ./apps/api/prisma
 
 # prisma.config.ts exige DATABASE_URL al cargarse. `generate` no se conecta a
 # ninguna base -- solo lee el schema -- asi que un valor de relleno alcanza y
 # evita que una credencial real quede grabada en una capa de la imagen.
 ENV DATABASE_URL="postgresql://build:build@localhost:5432/build"
 
+# --filter api instala solo lo que necesita esta aplicacion, no todo el
+# monorepo: el frontend no tiene nada que hacer en la imagen del backend.
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm install --frozen-lockfile
+    pnpm install --frozen-lockfile --filter api
 
 
 # ---------------------------------------------------------------------------
 # Compilacion.
 # ---------------------------------------------------------------------------
 FROM deps AS build
-COPY tsconfig.build.json nest-cli.json .swcrc ./
-COPY src ./src
-RUN pnpm build
+COPY apps/api/tsconfig.build.json apps/api/nest-cli.json apps/api/.swcrc ./apps/api/
+COPY apps/api/src ./apps/api/src
+RUN pnpm --filter api build
 
 
 # ---------------------------------------------------------------------------
@@ -65,12 +83,13 @@ FROM base AS runtime
 ENV NODE_ENV=production
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/api/package.json ./apps/api/
 
 # --ignore-scripts salta el postinstall, que ejecutaria `prisma generate`: el
 # cliente ya viene compilado dentro de dist, y la CLI de Prisma es una
 # dependencia de desarrollo que no existe en esta imagen.
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm install --prod --frozen-lockfile --ignore-scripts
+    pnpm install --prod --frozen-lockfile --ignore-scripts --filter api
 
 # El paquete `prisma` entra en produccion aunque sea una dependencia de
 # desarrollo, y no es un error: en Prisma 7 el *query compiler* (los .wasm que
@@ -92,7 +111,11 @@ RUN rm -rf \
       node_modules/.pnpm/react@* \
       node_modules/.pnpm/react-dom@*
 
-COPY --from=build /app/dist ./dist
+COPY --from=build /app/apps/api/dist ./apps/api/dist
+
+# Node busca node_modules subiendo por el arbol de directorios, asi que desde
+# aca encuentra tanto apps/api/node_modules como el de la raiz del workspace.
+WORKDIR /app/apps/api
 
 # La imagen de Node trae un usuario `node` sin privilegios. Si no se cambia,
 # el proceso corre como root y cualquier fallo de la aplicacion se ejecuta con

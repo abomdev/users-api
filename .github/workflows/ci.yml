@@ -64,21 +64,21 @@ jobs:
           DATABASE_URL: postgresql://users_api:postgres_local@localhost:5432/users_api_test?schema=public
 
       - name: Lint
-        run: pnpm lint
+        run: pnpm --filter api lint
 
       - name: Compilar
-        run: pnpm build
+        run: pnpm --filter api build
 
       - name: Tests unitarios
-        run: pnpm test
+        run: pnpm --filter api test
 
       - name: Tests end to end
         # Levanta la aplicacion completa contra el Postgres de arriba. Las
         # migraciones las aplica el globalSetup de Jest.
-        run: pnpm test:e2e
+        run: pnpm --filter api test:e2e
 
   docker:
-    name: Imagen Docker
+    name: Imagen Docker de la API
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -88,7 +88,9 @@ jobs:
       - name: Construir la imagen
         uses: docker/build-push-action@v6
         with:
+          # El contexto es la raiz del monorepo, donde vive el lockfile.
           context: .
+          file: apps/api/Dockerfile
           target: runtime
           # No se publica en ningun registro: el objetivo es detectar que el
           # Dockerfile dejo de construir, no distribuir la imagen.

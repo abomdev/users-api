@@ -1,3 +1,11 @@
+# Aplicaciones del monorepo. Cada una tiene su package.json y sus dependencias;
+# pnpm mantiene un unico lockfile en la raiz y un unico almacen de paquetes, asi
+# que lo que las dos comparten se descarga y se guarda una sola vez.
+packages:
+  - apps/*
+
+# ---------------------------------------------------------------------------
+
 # pnpm 11 bloquea por defecto los scripts de instalacion de las dependencias.
 # Es una proteccion contra codigo malicioso en postinstall: si no se aprueba
 # explicitamente, el script no corre.

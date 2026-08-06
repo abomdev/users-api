@@ -1,30 +1,36 @@
-# Todo lo que no aparezca aca se envia al daemon de Docker en cada build.
-# Ademas de hacerlo lento, cualquier cosa copiada por accidente termina dentro
-# de la imagen -- incluidos los secretos.
+# El contexto de build es la RAIZ del monorepo, no la carpeta de cada
+# aplicacion: el lockfile de pnpm vive aca arriba y sin el no se puede instalar
+# con --frozen-lockfile.
+#
+# Todo lo que no aparezca en este archivo se envia al daemon de Docker en cada
+# build. Ademas de hacerlo lento, cualquier cosa copiada por accidente termina
+# dentro de la imagen -- incluidos los secretos.
 
-node_modules
-dist
-coverage
+**/node_modules
+**/dist
+**/coverage
 
 # NUNCA dentro de la imagen: las credenciales van por variables de entorno
-.env
-.env.local
-.env.*.local
+**/.env
+**/.env.local
+**/.env.*.local
 
 .git
 .github
 .vscode
 .idea
+.claude
 
 # El cliente de Prisma se regenera dentro del build
-src/generated
+apps/api/src/generated
 
 # Tests y sus configuraciones: no forman parte del artefacto que se despliega
-test
+apps/api/test
 **/*.spec.ts
 **/*.e2e-spec.ts
-jest.config.js
+apps/api/jest.config.js
 
-*.log
+**/*.log
+**/*.tsbuildinfo
 *.md
 !README.md
