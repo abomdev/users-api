@@ -73,6 +73,17 @@ export class EnvironmentVariables {
   @IsInt({ message: 'REFRESH_TTL_DAYS debe ser un numero entero' })
   @Min(1)
   REFRESH_TTL_DAYS: number = 7;
+
+  /**
+   * Origen del cliente web autorizado a llamar a la API desde un navegador.
+   *
+   * En desarrollo el frontend habla con la API por un proxy del mismo origen,
+   * asi que CORS ni siquiera entra en juego. Esto existe para que la API siga
+   * siendo usable desde fuera de ese proxy sin tener que recompilarla.
+   */
+  @IsString()
+  @IsNotEmpty()
+  WEB_ORIGIN: string = 'http://localhost:5173';
 }
 
 export function validateEnv(raw: Record<string, unknown>): EnvironmentVariables {

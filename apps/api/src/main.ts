@@ -2,12 +2,30 @@ import { Logger, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
-import { ACCESS_TOKEN_SCHEME } from './modules/auth/presentation/auth.controller';
+import {
+  ACCESS_TOKEN_SCHEME,
+  REFRESH_COOKIE_SCHEME,
+} from './modules/auth/presentation/auth.controller';
+import { REFRESH_COOKIE } from './modules/auth/presentation/refresh-cookie';
 import { AllExceptionsFilter } from './shared/http/all-exceptions.filter';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
+  const configuracion = app.get(ConfigService<Record<string, unknown>, true>);
+
+  // Sin esto `request.cookies` no existe y el refresh token no se puede leer.
+  app.use(cookieParser());
+
+  // El cliente web habla con la API por un proxy del mismo origen, asi que en
+  // el camino normal CORS ni siquiera interviene. Se habilita para que la API
+  // siga siendo usable desde otro origen, y `credentials` es imprescindible:
+  // sin el, el navegador no envia ni acepta la cookie del refresh token.
+  app.enableCors({
+    origin: configuracion.get<string>('WEB_ORIGIN'),
+    credentials: true,
+  });
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -31,8 +49,7 @@ async function bootstrap(): Promise<void> {
   // recibe SIGTERM, en lugar de morir de golpe. Importa dentro de Docker.
   app.enableShutdownHooks();
 
-  const config = app.get(ConfigService<Record<string, unknown>, true>);
-  const port = config.get<number>('PORT');
+  const port = configuracion.get<number>('PORT');
 
   await app.listen(port);
   Logger.log(`API escuchando en http://localhost:${port}`, 'Bootstrap');
@@ -62,6 +79,11 @@ function setupSwagger(app: Parameters<typeof SwaggerModule.createDocument>[0]): 
       // controladores, o el boton Authorize no se aplica a esas rutas.
       ACCESS_TOKEN_SCHEME,
     )
+    // Declara la cookie del refresh token para que aparezca documentada. No
+    // hace falta cargarla a mano en la interfaz: como /docs se sirve desde el
+    // mismo origen que la API, el navegador la envia solo, y por eso se puede
+    // probar el refresh desde ahi.
+    .addCookieAuth(REFRESH_COOKIE, { type: 'apiKey', in: 'cookie' }, REFRESH_COOKIE_SCHEME)
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

@@ -80,8 +80,8 @@ decisión esté justificada y verificable, no la velocidad de entrega.
 |--------|------|-------------|--------|
 | `POST` | `/auth/register` | Crea una cuenta | Público |
 | `POST` | `/auth/login` | Autentica y emite el par de tokens | Público |
-| `POST` | `/auth/refresh` | Rota el refresh y emite un par nuevo | Público (requiere refresh válido) |
-| `POST` | `/auth/logout` | Revoca el refresh presentado | Público (requiere refresh) |
+| `POST` | `/auth/refresh` | Rota el refresh y emite un par nuevo | Cookie de refresh |
+| `POST` | `/auth/logout` | Revoca el refresh presentado | Cookie de refresh |
 | `GET` | `/auth/me` | Perfil del usuario autenticado | Access token |
 | `GET` | `/users` | Listado paginado de usuarios | Access token + rol `ADMIN` |
 
@@ -105,32 +105,36 @@ decisión esté justificada y verificable, no la velocidad de entrega.
 { "email": "ana@example.com", "password": "unaClaveSegura1" }
 
 // 200 OK
+// Set-Cookie: refresh_token=9f8c1d...; HttpOnly; SameSite=Lax; Path=/auth; Max-Age=604800
 {
   "accessToken": "eyJhbGciOiJIUzI1NiIs...",
-  "refreshToken": "9f8c1d...opaco...",
+  "tokenType": "Bearer",
+  "expiresIn": 900
+}
+```
+
+El refresh token **no aparece en el cuerpo**: viaja solo en la cookie, que
+JavaScript no puede leer (regla 22).
+
+```json
+// POST /auth/refresh   (sin cuerpo; el token va en la cookie)
+// Cookie: refresh_token=9f8c1d...
+
+// 200 OK
+// Set-Cookie: refresh_token=3a7b2e...; HttpOnly; SameSite=Lax; Path=/auth; Max-Age=604800
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiIs...",
   "tokenType": "Bearer",
   "expiresIn": 900
 }
 ```
 
 ```json
-// POST /auth/refresh  (request)
-{ "refreshToken": "9f8c1d...opaco..." }
-
-// 200 OK  — mismo cuerpo que el login, con ambos tokens renovados
-{
-  "accessToken": "eyJhbGciOiJIUzI1NiIs...",
-  "refreshToken": "3a7b2e...nuevo...",
-  "tokenType": "Bearer",
-  "expiresIn": 900
-}
-```
-
-```json
-// POST /auth/logout  (request)
-{ "refreshToken": "3a7b2e...nuevo..." }
+// POST /auth/logout   (sin cuerpo; el token va en la cookie)
+// Cookie: refresh_token=3a7b2e...
 
 // 204 No Content  — sin cuerpo
+// Set-Cookie: refresh_token=; Max-Age=0     (borra la cookie del navegador)
 ```
 
 ```json
@@ -196,6 +200,19 @@ decisión esté justificada y verificable, no la velocidad de entrega.
 
 21. Al eliminar un usuario, sus refresh tokens se eliminan en cascada.
 
+### Transporte de los tokens
+
+> Esta regla se agregó después de las demás, al sumarse el cliente web. Va
+> numerada al final y no intercalada entre las reglas de refresh, porque
+> renumerar invalidaría las citas que ya llevan el código y los tests.
+
+22. El refresh token viaja **únicamente** en una cookie `refresh_token` con los
+    atributos `HttpOnly`, `SameSite=Lax`, `Path=/auth` y `Max-Age` igual a la
+    vida del token (regla 12). En producción lleva además `Secure`. Nunca
+    aparece en el cuerpo de una respuesta ni se acepta en el de una petición.
+    El access token, en cambio, sí va en el cuerpo: es de vida corta y el
+    cliente lo mantiene en memoria.
+
 ## 6. Errores y casos borde
 
 Formato único para toda respuesta de error:
@@ -215,7 +232,7 @@ Cuando la validación falla, `message` es un arreglo con un texto por campo inv�
 | Código | Situación |
 |--------|-----------|
 | `400` | Cuerpo o query inválidos: email mal formado, contraseña fuera de rango, `page`/`limit` fuera de rango. |
-| `401` | Credenciales inválidas; access token ausente, vencido o mal firmado; refresh inexistente, vencido o revocado. |
+| `401` | Credenciales inválidas; access token ausente, vencido o mal firmado; cookie de refresh ausente, inexistente, vencida o revocada. |
 | `403` | Autenticado pero sin el rol necesario. |
 | `404` | Ruta inexistente. |
 | `409` | Email ya registrado. |
@@ -226,6 +243,8 @@ Cuando la validación falla, `message` es un arreglo con un texto por campo inv�
 - Emails que difieren solo en mayúsculas o espacios (`Ana@Example.com `) son el mismo usuario (regla 1).
 - Refresh usado dos veces: el segundo intento revoca la familia (regla 14).
 - Logout repetido: sigue siendo `204`, no dispara la regla 14 (regla 16).
+- `/auth/refresh` sin la cookie: `401`, igual que con una cookie inválida.
+- `/auth/logout` sin la cookie: `204`, por la idempotencia de la regla 16.
 - `page` más allá del último: `200` con `data` vacío y `meta` coherente.
 - Campos extra en el cuerpo: se descartan, no provocan error.
 
@@ -241,7 +260,7 @@ Cada criterio se traduce en al menos un test que lo cita por su identificador.
 - **CA-5** — Dado un cuerpo que incluye `role: "ADMIN"`, cuando registro, entonces la cuenta creada tiene rol `USER`. *(regla 5)*
 
 **Login**
-- **CA-6** — Dadas credenciales correctas, cuando hago login, entonces recibo `200` con `accessToken` y `refreshToken`. *(regla 7)*
+- **CA-6** — Dadas credenciales correctas, cuando hago login, entonces recibo `200` con `accessToken` en el cuerpo y el refresh en una cookie `HttpOnly`, sin que aparezca en el cuerpo. *(reglas 7, 22)*
 - **CA-7** — Dada una contraseña incorrecta, y dado un email inexistente, cuando hago login, entonces ambos casos devuelven `401` con idéntico mensaje. *(regla 8)*
 - **CA-8** — Dado un login exitoso, cuando decodifico el access token, entonces su payload trae `sub`, `email` y `role`. *(regla 9)*
 
@@ -251,12 +270,13 @@ Cada criterio se traduce en al menos un test que lo cita por su identificador.
 - **CA-11** — Dado un token con firma alterada, cuando pido `/auth/me`, entonces recibo `401`. *(regla 10)*
 
 **Refresh y rotación**
-- **CA-12** — Dado un refresh válido, cuando lo uso, entonces recibo `200` con un par nuevo y el `refreshToken` devuelto es distinto del enviado. *(regla 13)*
+- **CA-12** — Dada una cookie de refresh válida, cuando llamo a `/auth/refresh`, entonces recibo `200` y una cookie nueva con un valor distinto del anterior. *(reglas 13, 22)*
 - **CA-13** — Dado un refresh ya rotado, cuando lo reuso en `/auth/refresh`, entonces recibo `401` y **todos** los tokens de esa familia quedan revocados. *(regla 14)*
 - **CA-14** — Dada una familia revocada por reuso, cuando intento refrescar con el token más reciente de esa familia, entonces recibo `401`. *(reglas 14, 15)*
 - **CA-15** — Dado un refresh vencido, cuando lo uso, entonces recibo `401`. *(regla 15)*
 - **CA-16** — Dado un refresh válido, cuando hago logout, entonces recibo `204` y ese token deja de servir para refrescar. *(regla 16)*
 - **CA-17** — Dado un refresh ya revocado por logout, cuando repito el logout, entonces recibo `204` y la familia **no** se ve afectada. *(regla 16)*
+- **CA-23** — Dado un login exitoso, cuando inspecciono la cookie emitida, entonces tiene `HttpOnly`, `SameSite=Lax` y `Path=/auth`. *(regla 22)*
 
 **Roles y listado**
 - **CA-18** — Dado un usuario con rol `USER`, cuando pido `/users`, entonces recibo `403`. *(regla 17)*
@@ -288,10 +308,28 @@ pero el registro sí, al devolver `409`. Es un compromiso conocido: sin ese `409
 registro sería inutilizable. Mitigarlo requeriría un flujo de confirmación por email,
 que está fuera de alcance.
 
-**Los tokens viajan en el cuerpo JSON, no en cookies.** Simplifica probar la API con
-`curl` y la deja lista para clientes que no son navegadores. Una cookie `httpOnly`
-protegería mejor contra XSS y es el camino natural cuando se sume el frontend; el
-cambio afectaría al transporte, no a estas reglas.
+**Por qué el refresh token pasó a una cookie `HttpOnly` (regla 22).** La primera
+versión de esta spec lo hacía viajar en el cuerpo JSON, y anotaba que la cookie
+era *"el camino natural cuando se sume el frontend"*. Al sumarse el cliente web
+se ejecutó ese cambio, por un motivo concreto: guardar en `localStorage` un
+token de siete días lo deja al alcance de cualquier script inyectado, y una sola
+vulnerabilidad de XSS bastaría para robar sesiones enteras. `HttpOnly` significa
+que JavaScript no puede leer la cookie ni siquiera desde la propia página.
+
+El access token **sigue en el cuerpo** y eso es deliberado: vive quince minutos y
+el cliente lo mantiene en memoria, así que un XSS solo alcanzaría esa ventana.
+
+`SameSite=Lax` y `Path=/auth` acotan cuándo se envía: sólo a los endpoints que la
+necesitan, y no en peticiones cruzadas iniciadas por otro sitio, que es la
+defensa contra CSRF. Probar con `curl` ahora requiere `-c cookies.txt -b
+cookies.txt`, un costo pequeño frente a lo que se gana.
+
+**Por qué el frontend habla con la API a través de un proxy.** Una cookie
+cross-origin necesita `SameSite=None`, que exige `Secure`, que exige HTTPS: sobre
+`http://localhost` el navegador la rechaza. Por eso el cliente web no llama a la
+API por su puerto sino por `/api` del mismo origen —Vite en desarrollo, nginx en
+producción—. Igual se habilita CORS con credenciales y origen configurable, para
+que la API siga siendo usable desde fuera de ese proxy.
 
 **El rol se cambia desde la base de datos.** Un endpoint para promover
 administradores necesita su propia capa de autorización y auditoría. Queda fuera

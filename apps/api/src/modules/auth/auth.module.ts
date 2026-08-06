@@ -19,6 +19,7 @@ import { JwtAccessTokenIssuer } from './infrastructure/jwt-access-token.issuer';
 import { JwtStrategy } from './infrastructure/jwt.strategy';
 import { PrismaRefreshTokenRepository } from './infrastructure/prisma-refresh-token.repository';
 import { AuthController } from './presentation/auth.controller';
+import { RefreshCookie } from './presentation/refresh-cookie';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { AuthController } from './presentation/auth.controller';
     GetOwnProfileUseCase,
     IssueTokenPair,
     JwtStrategy,
+    RefreshCookie,
     { provide: PASSWORD_HASHER, useClass: Argon2PasswordHasher },
     { provide: ACCESS_TOKEN_ISSUER, useClass: JwtAccessTokenIssuer },
     { provide: REFRESH_TOKEN_GENERATOR, useClass: CryptoRefreshTokenGenerator },

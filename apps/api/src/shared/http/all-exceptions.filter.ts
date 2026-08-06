@@ -6,7 +6,7 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common';
-import { Request, Response } from 'express';
+import type { Request, Response } from 'express';
 import { DomainError, DomainErrorKind } from '../domain/domain.error';
 
 /** Formato unico de error, seccion 6 de spec.md. */
